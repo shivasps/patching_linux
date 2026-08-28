@@ -1,0 +1,50 @@
+Bash:
+find . -iname '.gitmodules' -exec dirname {} \; | xargs -I % sh -c 'echo %; git -C % checkout master; git -C % pull; git -C % submodule update --remote'
+find . -iname '.gitmodules' -exec dirname {} \; | xargs -I % sh -c 'echo %; git -C% diff'
+find . -iname '.gitmodules' -exec dirname {} \; | xargs -I % sh -c 'echo %; git -C% add testing/base'
+find . -iname '.gitmodules' -exec dirname {} \; | xargs -I % sh -c 'echo %; git -C% commit -m "update submodule"'
+grep -rl digital-dev * | xargs sed -i '' -e 's/digital-dev\.nz\.thenational\.com\/stash/bitbucket\.nz\.thenational\.com/g'
+
+Replace _to -
+find . -type d -name '*_*' -exec bash -c 'mv "$1" "${1/_/-}"' -- {} \;
+Remove dir: 
+find . -type d -name 'bnz-sudo' -exec bash -c 'rm -rf "$1"' -- {} \;
+Search and replace all files
+sed -i '' 's/eks-prod-00/eks-prod-30/g' *
+
+Argocd:
+
+
+Connect argocd to below execution:
+argocd app get ingress -ojson | jq '.status| .sync, .summary'
+argocd app patch ingress --patch '{"spec": { "source": { "targetRevision": "version_4.2.1" } }}' --type merge
+argocd app sync ingress--prune --force
+argocd app terminate-op ingress
+
+Don’t connect argocd when use —core:
+kubectl config set-context --current --namespace=argocd
+argocd --core app patch ingress --patch '{"spec": { "source": { "targetRevision": "master" } }}' --type merge
+argocd --core app sync ingress --prune --force
+argocd —core app terminate-op ingress
+
+To check the difference again live:
+kc diff -k overlays/aue-prod-tool-aks01
+kc kustomize overlays/aue-prod-tool-aks01
+Kc explain
+
+Centralized argocd process:
+Clone https://digital-dev.nz.thenational.com/stash/projects/PI/repos/k8s_argocd_apps/browse/helpers?at=refs%2Fheads%2Ffeature%2Fv2.4.11
+Login to test cluster:
+helpers/testing.sh <component> <clustername> <branch>
+helper/testing.sh argo-events ase-dev-aks01 foobar
+argocd --core app sync ase-prod-aks01-XXXXX
+
+
+argocd --core app get root-app
+argocd --core app sync root-app --resource argoproj.io:ApplicationSet:argo-events
+
+Argocd filters:
+argocd --core app get ase-dev-aks01-bnz-prometheus -ojson | jq'.status| .sync, .summary'argocd --core app list -l env=nonprod -ojson | jq -r '.[] | select(.status.sync.status|contains("OutOfSync"))| .metadata.name' | xargs -n1 argocd --core app sync
+argocd --core app list -l env=prod -ojson | jq -r '.[] | select(.metadata.name|
+contains("argocd")) | .metadata.name' | xargs -n 1 argocd --core app sync
+argocd --core app list -l env=prod -ojson | jq -r '.[] | select(.metadata.name| contains("argocd"))| select(.status.sync.status|contains("OutOfSync")) | .metadata.name'
